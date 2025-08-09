@@ -117,7 +117,8 @@ module SHA256top(
                     INIT = 3'b001,
                     PROCESS = 3'b010,
                     FINALIZE = 3'b011,
-                    DONE = 3'b100;
+                    STABILIZE = 3'b100,
+                    DONE = 3'b101;
     
     reg [2:0] state;
     reg [6:0] round_counter;  // 0-63 for SHA-256 rounds
@@ -237,6 +238,11 @@ module SHA256top(
                     H6 <= H6 + g;
                     H7 <= H7 + h;
                     
+                    state <= STABILIZE;
+                end
+                
+                STABILIZE: begin
+                    // Allow one cycle for hash values to stabilize
                     state <= DONE;
                 end
                 

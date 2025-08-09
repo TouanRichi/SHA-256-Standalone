@@ -5,6 +5,10 @@ Source/C_Compare/SHA256
 Source/C_Compare/Sha256_C/sha256_test
 Source/C_code/C1
 Source/C_code/C2
+build/
+*.vcd
+*.fst
+*.lxt
 
 # Output files
 Data_Mem.txt

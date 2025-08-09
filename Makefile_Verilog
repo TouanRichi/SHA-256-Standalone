@@ -1,0 +1,172 @@
+# SHA-256 Standalone Verilog Build System
+# Makefile for simulation and synthesis
+
+# Project settings
+PROJECT_NAME = SHA256_Standalone
+TOP_MODULE = SHA256_Top
+TB_MODULE = SHA256_tb
+
+# Directories
+SRC_DIR = Source
+BUILD_DIR = build
+VCD_DIR = $(BUILD_DIR)/vcd
+
+# Source files
+VERILOG_SOURCES = $(SRC_DIR)/SHA256_Top.v \
+                  $(SRC_DIR)/FSM_Sha.v \
+                  $(SRC_DIR)/Mux32.v \
+                  $(SRC_DIR)/Reg0.v \
+                  $(SRC_DIR)/Reg1_Sha.v \
+                  $(SRC_DIR)/Reg2_Sha.v \
+                  $(SRC_DIR)/Reg3_Sha.v \
+                  $(SRC_DIR)/Reg4_Sha.v \
+                  $(SRC_DIR)/Reg5.v \
+                  $(SRC_DIR)/Reg6.v \
+                  $(SRC_DIR)/Reg7.v \
+                  $(SRC_DIR)/Reg8.v \
+                  $(SRC_DIR)/Reg9.v \
+                  $(SRC_DIR)/Reg10.v \
+                  $(SRC_DIR)/Reg11.v \
+                  $(SRC_DIR)/Reg12.v \
+                  $(SRC_DIR)/Reg13.v \
+                  $(SRC_DIR)/Reg14.v \
+                  $(SRC_DIR)/Reg15.v \
+                  $(SRC_DIR)/Reg_A.v \
+                  $(SRC_DIR)/Reg_B.v \
+                  $(SRC_DIR)/Reg_C.v \
+                  $(SRC_DIR)/Reg_D.v \
+                  $(SRC_DIR)/Reg_E.v \
+                  $(SRC_DIR)/Reg_F.v \
+                  $(SRC_DIR)/Reg_G.v \
+                  $(SRC_DIR)/Reg_H.v \
+                  $(SRC_DIR)/Reg32.v \
+                  $(SRC_DIR)/Adder_Sha.v \
+                  $(SRC_DIR)/Adder1.v \
+                  $(SRC_DIR)/Adder2.v \
+                  $(SRC_DIR)/Adder3.v \
+                  $(SRC_DIR)/Adder4.v \
+                  $(SRC_DIR)/Delta0.v \
+                  $(SRC_DIR)/Delta1.v \
+                  $(SRC_DIR)/Sigma0.v \
+                  $(SRC_DIR)/Sigma1.v \
+                  $(SRC_DIR)/Ch.v \
+                  $(SRC_DIR)/Maj.v \
+                  $(SRC_DIR)/Parise_mux.v \
+                  $(SRC_DIR)/Reg_K.v
+
+TESTBENCH_SOURCES = $(SRC_DIR)/SHA256_tb.v
+
+# Simulation tools
+IVERILOG = iverilog
+VVP = vvp
+GTKWAVE = gtkwave
+
+# C Compiler settings for comparison
+CC = gcc
+CFLAGS = -Wall -O2 -D_POSIX_C_SOURCE=199309L
+C_COMPARE_DIR = $(SRC_DIR)/C_Compare
+SHA256_C_DIR = $(C_COMPARE_DIR)/Sha256_C
+C_CODE_DIR = $(SRC_DIR)/C_code
+
+# Build targets
+.PHONY: all clean build test simulate view help verilog c-test
+
+# Default target
+all: build test
+
+help:
+	@echo "SHA-256 Standalone Build System"
+	@echo "================================"
+	@echo ""
+	@echo "Available targets:"
+	@echo "  build      - Compile Verilog design"
+	@echo "  test       - Run Verilog simulation"
+	@echo "  simulate   - Same as test"
+	@echo "  c-test     - Test C implementations"
+	@echo "  view       - Open waveform viewer (GTKWave)"
+	@echo "  clean      - Clean build artifacts"
+	@echo "  help       - Show this help message"
+	@echo ""
+	@echo "Example usage:"
+	@echo "  make build    # Compile the design"
+	@echo "  make test     # Run Verilog simulation"
+	@echo "  make c-test   # Test C implementations"
+	@echo "  make view     # View waveforms"
+
+# Create build directory
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+	mkdir -p $(VCD_DIR)
+
+# Build the Verilog design
+build: $(BUILD_DIR)
+	@echo "=== Building SHA-256 Verilog Design ==="
+	@echo "Compiling Verilog sources..."
+	$(IVERILOG) -o $(BUILD_DIR)/$(PROJECT_NAME) \
+		-I$(SRC_DIR) \
+		$(VERILOG_SOURCES) $(TESTBENCH_SOURCES)
+	@echo "✓ Verilog build completed successfully!"
+
+# Run Verilog simulation
+test: build simulate
+
+simulate: build
+	@echo "=== Running SHA-256 Verilog Simulation ==="
+	cd $(BUILD_DIR) && $(VVP) $(PROJECT_NAME)
+	@echo "✓ Verilog simulation completed!"
+	@if [ -f sha256_test.vcd ]; then \
+		mv sha256_test.vcd $(VCD_DIR)/; \
+		echo "✓ VCD file saved to $(VCD_DIR)/sha256_test.vcd"; \
+	fi
+
+# Test C implementations  
+c-test:
+	@echo "=== Testing C Implementations ==="
+	@if [ -f $(C_COMPARE_DIR)/SHA256.c ]; then \
+		echo "Building and testing reference implementation..."; \
+		$(CC) $(CFLAGS) -o $(BUILD_DIR)/sha256_ref $(C_COMPARE_DIR)/SHA256.c; \
+		./$(BUILD_DIR)/sha256_ref; \
+	fi
+	@if [ -f $(SHA256_C_DIR)/sha256.c ]; then \
+		echo "Building and testing optimized implementation..."; \
+		$(CC) $(CFLAGS) -o $(BUILD_DIR)/sha256_opt $(SHA256_C_DIR)/sha256.c $(SHA256_C_DIR)/example.c; \
+		./$(BUILD_DIR)/sha256_opt; \
+	fi
+	@echo "✓ C implementation tests completed!"
+
+# View waveforms
+view: $(VCD_DIR)/sha256_test.vcd
+	@echo "=== Opening Waveform Viewer ==="
+	$(GTKWAVE) $(VCD_DIR)/sha256_test.vcd &
+
+$(VCD_DIR)/sha256_test.vcd:
+	@echo "VCD file not found. Running simulation first..."
+	$(MAKE) simulate
+
+# Syntax check only
+check: $(BUILD_DIR)
+	@echo "=== Checking Verilog Syntax ==="
+	$(IVERILOG) -t null $(VERILOG_SOURCES)
+	@echo "✓ Syntax check passed!"
+
+# Clean build artifacts
+clean:
+	@echo "=== Cleaning Build Artifacts ==="
+	rm -rf $(BUILD_DIR)
+	rm -f *.vcd *.lxt *.fst
+	@echo "✓ Clean completed!"
+
+# Show project info
+info:
+	@echo "=== Project Information ==="
+	@echo "Project Name: $(PROJECT_NAME)"
+	@echo "Top Module:   $(TOP_MODULE)"
+	@echo "Testbench:    $(TB_MODULE)"
+	@echo "Source Dir:   $(SRC_DIR)"
+	@echo "Build Dir:    $(BUILD_DIR)"
+	@echo ""
+	@echo "Verilog Source Files:"
+	@for file in $(VERILOG_SOURCES); do echo "  $$file"; done
+	@echo ""
+	@echo "Testbench Files:"  
+	@for file in $(TESTBENCH_SOURCES); do echo "  $$file"; done

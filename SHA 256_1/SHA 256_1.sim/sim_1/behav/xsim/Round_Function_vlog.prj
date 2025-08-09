@@ -1,0 +1,13 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  \
+"../../../../../Source/Ch.v" \
+"../../../../../Source/Maj.v" \
+"../../../../../Source/Sigma0.v" \
+"../../../../../Source/Sigma1.v" \
+"../../../../../Source/Round_Function.v" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

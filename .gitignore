@@ -1,0 +1,23 @@
+# Build artifacts
+*.o
+*.exe
+Source/C_Compare/SHA256
+Source/C_Compare/Sha256_C/sha256_test
+Source/C_code/C1
+Source/C_code/C2
+
+# Output files
+Data_Mem.txt
+Data_Mem2.txt
+output_padding.txt
+
+# Editor files
+.vscode/
+.vs/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

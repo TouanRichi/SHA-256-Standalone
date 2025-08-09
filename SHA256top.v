@@ -126,12 +126,13 @@ module SHA256top(
     reg [31:0] a, b, c, d, e, f, g, h;          // Working variables
     reg [31:0] H0, H1, H2, H3, H4, H5, H6, H7;  // Hash values
     reg [31:0] W [0:63];                        // Message schedule
+    reg [31:0] W_current;                       // Current W value to avoid race conditions
     
     // Intermediate computation values
     wire [31:0] T1, T2;
     
-    // Compute T1 and T2 (combinational)
-    assign T1 = h + big_sigma1(e) + choice(e, f, g) + K[round_counter] + W[round_counter];
+    // Compute T1 and T2 combinationally using current W value
+    assign T1 = h + big_sigma1(e) + choice(e, f, g) + K[round_counter] + W_current;
     assign T2 = big_sigma0(a) + majority(a, b, c);
     
     // State machine logic
@@ -141,6 +142,7 @@ module SHA256top(
             round_counter <= 0;
             sha256_done <= 0;
             sha256_result <= 256'h0;
+            W_current <= 0;
             
             // Reset working variables
             a <= 0; b <= 0; c <= 0; d <= 0; e <= 0; f <= 0; g <= 0; h <= 0;
@@ -183,18 +185,15 @@ module SHA256top(
                     W[8]  <= w8_sha256;  W[9]  <= w9_sha256;  W[10] <= w10_sha256; W[11] <= w11_sha256;
                     W[12] <= w12_sha256; W[13] <= w13_sha256; W[14] <= w14_sha256; W[15] <= w15_sha256;
                     
+                    // Set current W for round 0
+                    W_current <= w0_sha256;
+                    
                     state <= PROCESS;
                 end
                 
                 PROCESS: begin
                     if (round_counter < 64) begin
-                        // Extend message schedule for rounds 16-63 (if needed)
-                        if (round_counter >= 16) begin
-                            W[round_counter] <= small_sigma1(W[round_counter-2]) + W[round_counter-7] + 
-                                               small_sigma0(W[round_counter-15]) + W[round_counter-16];
-                        end
-                        
-                        // Perform SHA-256 round
+                        // Perform SHA-256 compression round using stable W_current
                         h <= g;
                         g <= f;
                         f <= e;
@@ -203,6 +202,24 @@ module SHA256top(
                         c <= b;
                         b <= a;
                         a <= T1 + T2;
+                        
+                        // Prepare for next round
+                        if (round_counter < 63) begin
+                            // Extend message schedule if needed (for next round)
+                            if (round_counter >= 15) begin
+                                W[round_counter+1] <= small_sigma1(W[round_counter-1]) + W[round_counter-6] + 
+                                                     small_sigma0(W[round_counter-14]) + W[round_counter-15];
+                            end
+                            
+                            // Set W_current for next round (from existing W or updated W)
+                            if (round_counter < 15) begin
+                                W_current <= W[round_counter+1]; // Use existing W[1..15]
+                            end else begin
+                                // For round 16+, use the value we just computed
+                                W_current <= small_sigma1(W[round_counter-1]) + W[round_counter-6] + 
+                                            small_sigma0(W[round_counter-14]) + W[round_counter-15];
+                            end
+                        end
                         
                         round_counter <= round_counter + 1;
                     end else begin

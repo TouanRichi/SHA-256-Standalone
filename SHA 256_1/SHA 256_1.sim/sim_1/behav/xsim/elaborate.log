@@ -1,8 +1,0 @@
-Vivado Simulator 2020.1
-Copyright 1986-1999, 2001-2020 Xilinx, Inc. All Rights Reserved.
-Running: D:/Xilinx/Vivado/2020.1/bin/unwrapped/win64.o/xelab.exe -wto ef4bf05892b144c18f77462c61c2cf58 --incr --debug typical --relax --mt 2 -L xil_defaultlib -L unisims_ver -L unimacro_ver -L secureip --snapshot Round_Function_behav xil_defaultlib.Round_Function xil_defaultlib.glbl -log elaborate.log 
-Using 2 slave threads.
-Starting static elaboration
-Pass Through NonSizing Optimizer
-ERROR: [VRFC 10-8333] binding VHDL entity 'sigma0' does not have port 'a' [C:/Users/Dat Pham/Downloads/SHA256_Standalone1/Source/Round_Function.v:32]
-ERROR: [XSIM 43-3322] Static elaboration of top level Verilog design unit(s) in library work failed.

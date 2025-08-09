@@ -63,8 +63,11 @@ module SHA256tb();
     // Test counter for debugging
     integer cycle_count = 0;
     always @(posedge clk) begin
-        if (start_in && !sha256_done)
+        if (start_in && !sha256_done) begin
             cycle_count = cycle_count + 1;
+        end else if (!start_in) begin
+            cycle_count = 0;
+        end
     end
     
     // Task to run a single test case
@@ -103,6 +106,9 @@ module SHA256tb();
             
             // Stop start signal and wait
             start_in = 0;
+            
+            // Wait for sha256_done to go low before next test
+            wait(sha256_done == 0);
             #20;
         end
     endtask
@@ -199,8 +205,9 @@ module SHA256tb();
                  256'hf7846f55cf23e14eebeab5b4e1550cad5b509e3348fbc4efa3a1413d393cb650);
         
         //========================================================================
-        // Test Case 6: "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"
+        // Test Case 6: "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"  
         // Expected: 248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1
+        // Note: This is exactly 56 bytes = 448 bits, fits in one 512-bit block
         //========================================================================
         clear_message();
         w0_sha256 = 32'h61626364;  // "abcd"
@@ -209,15 +216,15 @@ module SHA256tb();
         w3_sha256 = 32'h64656667;  // "defg"
         w4_sha256 = 32'h65666768;  // "efgh"
         w5_sha256 = 32'h66676869;  // "fghi"
-        w6_sha256 = 32'h6768696A;  // "ghij"
-        w7_sha256 = 32'h68696A6B;  // "hijk"
-        w8_sha256 = 32'h696A6B6C;  // "ijkl"
-        w9_sha256 = 32'h6A6B6C6D;  // "jklm"
-        w10_sha256 = 32'h6B6C6D6E; // "klmn"
-        w11_sha256 = 32'h6C6D6E6F; // "lmno"
-        w12_sha256 = 32'h6D6E6F70; // "mnop"
-        w13_sha256 = 32'h6E6F7071; // "nopq"
-        w14_sha256 = 32'h80000000; // padding bit
+        w6_sha256 = 32'h6768696a;  // "ghij"
+        w7_sha256 = 32'h68696a6b;  // "hijk"
+        w8_sha256 = 32'h696a6b6c;  // "ijkl"
+        w9_sha256 = 32'h6a6b6c6d;  // "jklm"
+        w10_sha256 = 32'h6b6c6d6e; // "klmn"
+        w11_sha256 = 32'h6c6d6e6f; // "lmno"
+        w12_sha256 = 32'h6d6e6f70; // "mnop"
+        w13_sha256 = 32'h6e6f7071; // "nopq"
+        w14_sha256 = 32'h80000000; // padding bit (56 bytes = 448 bits, so padding starts here)
         w15_sha256 = 32'h000001C0; // Length: 448 bits (56 bytes)
         
         run_test("Test Case 6: Long message", 

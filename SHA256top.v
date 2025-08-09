@@ -203,25 +203,24 @@ module SHA256top(
                         b <= a;
                         a <= T1 + T2;
                         
-                        // Prepare for next round
+                        // Increment round counter
+                        round_counter <= round_counter + 1;
+                        
+                        // Extend message schedule and set W_current for NEXT round
                         if (round_counter < 63) begin
-                            // Extend message schedule if needed (for next round)
                             if (round_counter >= 15) begin
+                                // For rounds 16-63, extend the message schedule
+                                // W[t] = σ₁(W[t-2]) + W[t-7] + σ₀(W[t-15]) + W[t-16]
+                                // Since we're preparing for next round (round_counter+1), compute W[round_counter+1]
                                 W[round_counter+1] <= small_sigma1(W[round_counter-1]) + W[round_counter-6] + 
                                                      small_sigma0(W[round_counter-14]) + W[round_counter-15];
-                            end
-                            
-                            // Set W_current for next round (from existing W or updated W)
-                            if (round_counter < 15) begin
-                                W_current <= W[round_counter+1]; // Use existing W[1..15]
-                            end else begin
-                                // For round 16+, use the value we just computed
                                 W_current <= small_sigma1(W[round_counter-1]) + W[round_counter-6] + 
                                             small_sigma0(W[round_counter-14]) + W[round_counter-15];
+                            end else begin
+                                // For rounds 0-15, use pre-loaded W values
+                                W_current <= W[round_counter+1];
                             end
                         end
-                        
-                        round_counter <= round_counter + 1;
                     end else begin
                         state <= FINALIZE;
                     end

@@ -241,11 +241,14 @@ module SHA256top(
                 end
                 
                 DONE: begin
+                    // Ensure result is set before done signal
                     sha256_result <= {H0, H1, H2, H3, H4, H5, H6, H7};
                     sha256_done <= 1;
                     
+                    // Only return to IDLE when start_in is released
                     if (!start_in) begin
                         state <= IDLE;
+                        sha256_done <= 0;
                     end
                 end
                 

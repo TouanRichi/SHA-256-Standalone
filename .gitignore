@@ -1,6 +1,12 @@
 # Build artifacts
 *.o
+*.riscv.o
 *.exe
+*.a
+sha256_test
+sha256_example
+sha256_test.riscv
+sha256_example.riscv
 Source/C_Compare/SHA256
 Source/C_Compare/Sha256_C/sha256_test
 Source/C_code/C1

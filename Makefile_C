@@ -1,0 +1,167 @@
+# Makefile for SHA-256 RISC-V Implementation
+# Supports cross-compilation for RISC-V and native compilation
+
+# Compiler settings
+CC ?= gcc
+RISCV_CC ?= riscv64-linux-gnu-gcc
+CFLAGS = -std=c99 -Wall -Wextra -O2 -g
+RISCV_CFLAGS = -std=c99 -Wall -Wextra -O2 -g -march=rv64gc -mabi=lp64d
+
+# Source files
+SOURCES = sha256.c
+HEADERS = sha256.h
+TEST_SOURCES = sha256_test.c
+EXAMPLE_SOURCES = sha256_example.c
+
+# Object files
+OBJECTS = $(SOURCES:.c=.o)
+TEST_OBJECTS = $(TEST_SOURCES:.c=.o) $(OBJECTS)
+EXAMPLE_OBJECTS = $(EXAMPLE_SOURCES:.c=.o) $(OBJECTS)
+
+# RISC-V object files
+RISCV_OBJECTS = $(SOURCES:.c=.riscv.o)
+RISCV_TEST_OBJECTS = $(TEST_SOURCES:.c=.riscv.o) $(RISCV_OBJECTS)
+RISCV_EXAMPLE_OBJECTS = $(EXAMPLE_SOURCES:.c=.riscv.o) $(RISCV_OBJECTS)
+
+# Target executables
+TARGETS = sha256_test sha256_example
+RISCV_TARGETS = sha256_test.riscv sha256_example.riscv
+LIBRARY = libsha256.a
+RISCV_LIBRARY = libsha256.riscv.a
+
+# Default target
+.PHONY: all
+all: $(TARGETS) $(LIBRARY)
+
+# RISC-V targets
+.PHONY: riscv
+riscv: $(RISCV_TARGETS) $(RISCV_LIBRARY)
+
+# Native compilation
+%.o: %.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+sha256_test: $(TEST_OBJECTS)
+	$(CC) $(CFLAGS) $^ -o $@
+
+sha256_example: $(EXAMPLE_OBJECTS)
+	$(CC) $(CFLAGS) $^ -o $@
+
+$(LIBRARY): $(OBJECTS)
+	ar rcs $@ $^
+
+# RISC-V cross-compilation
+%.riscv.o: %.c $(HEADERS)
+	$(RISCV_CC) $(RISCV_CFLAGS) -c $< -o $@
+
+sha256_test.riscv: $(RISCV_TEST_OBJECTS)
+	$(RISCV_CC) $(RISCV_CFLAGS) $^ -o $@
+
+sha256_example.riscv: $(RISCV_EXAMPLE_OBJECTS)
+	$(RISCV_CC) $(RISCV_CFLAGS) $^ -o $@
+
+$(RISCV_LIBRARY): $(RISCV_OBJECTS)
+	riscv64-linux-gnu-ar rcs $@ $^
+
+# Test targets
+.PHONY: test
+test: sha256_test
+	@echo "=== Running SHA-256 Tests (Native) ==="
+	./sha256_test
+
+.PHONY: test-riscv
+test-riscv: sha256_test.riscv
+	@echo "=== Running SHA-256 Tests (RISC-V with QEMU) ==="
+	qemu-riscv64 -L /usr/riscv64-linux-gnu ./sha256_test.riscv
+
+.PHONY: example
+example: sha256_example
+	@echo "=== Running SHA-256 Example (Native) ==="
+	./sha256_example
+
+.PHONY: example-riscv
+example-riscv: sha256_example.riscv
+	@echo "=== Running SHA-256 Example (RISC-V with QEMU) ==="
+	qemu-riscv64 -L /usr/riscv64-linux-gnu ./sha256_example.riscv
+
+# Performance test
+.PHONY: performance
+performance: sha256_test
+	@echo "=== Running SHA-256 Performance Test (Native) ==="
+	./sha256_test --performance
+
+.PHONY: performance-riscv
+performance-riscv: sha256_test.riscv
+	@echo "=== Running SHA-256 Performance Test (RISC-V with QEMU) ==="
+	qemu-riscv64 -L /usr/riscv64-linux-gnu ./sha256_test.riscv --performance
+
+# Clean targets
+.PHONY: clean
+clean:
+	rm -f $(OBJECTS) $(TEST_OBJECTS) $(EXAMPLE_OBJECTS)
+	rm -f $(RISCV_OBJECTS) $(RISCV_TEST_OBJECTS) $(RISCV_EXAMPLE_OBJECTS)
+	rm -f $(TARGETS) $(RISCV_TARGETS)
+	rm -f $(LIBRARY) $(RISCV_LIBRARY)
+	rm -f *.o *.riscv.o
+
+# Install targets (copy to system directories)
+.PHONY: install
+install: $(LIBRARY) $(HEADERS)
+	@echo "=== Installing SHA-256 Library ==="
+	mkdir -p $(DESTDIR)/usr/local/lib
+	mkdir -p $(DESTDIR)/usr/local/include
+	cp $(LIBRARY) $(DESTDIR)/usr/local/lib/
+	cp $(HEADERS) $(DESTDIR)/usr/local/include/
+
+.PHONY: install-riscv
+install-riscv: $(RISCV_LIBRARY) $(HEADERS)
+	@echo "=== Installing SHA-256 RISC-V Library ==="
+	mkdir -p $(DESTDIR)/usr/riscv64-linux-gnu/lib
+	mkdir -p $(DESTDIR)/usr/riscv64-linux-gnu/include
+	cp $(RISCV_LIBRARY) $(DESTDIR)/usr/riscv64-linux-gnu/lib/libsha256.a
+	cp $(HEADERS) $(DESTDIR)/usr/riscv64-linux-gnu/include/
+
+# Help target
+.PHONY: help
+help:
+	@echo "SHA-256 RISC-V Implementation Makefile"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all           - Build native executables and library"
+	@echo "  riscv         - Build RISC-V cross-compiled executables and library"
+	@echo "  test          - Run tests (native)"
+	@echo "  test-riscv    - Run tests (RISC-V with QEMU)"
+	@echo "  example       - Run example (native)"
+	@echo "  example-riscv - Run example (RISC-V with QEMU)"
+	@echo "  performance   - Run performance test (native)"
+	@echo "  performance-riscv - Run performance test (RISC-V with QEMU)"
+	@echo "  clean         - Clean build files"
+	@echo "  install       - Install library and headers (native)"
+	@echo "  install-riscv - Install library and headers (RISC-V)"
+	@echo "  help          - Show this help message"
+	@echo ""
+	@echo "Environment Variables:"
+	@echo "  CC            - Native C compiler (default: gcc)"
+	@echo "  RISCV_CC      - RISC-V C compiler (default: riscv64-linux-gnu-gcc)"
+	@echo "  CFLAGS        - Additional compiler flags"
+	@echo "  DESTDIR       - Installation prefix"
+
+# Project information
+.PHONY: info
+info:
+	@echo "=== SHA-256 RISC-V Implementation ==="
+	@echo "Converted from Verilog implementation"
+	@echo "NIST FIPS 180-4 Compliant"
+	@echo ""
+	@echo "Files:"
+	@echo "  sha256.h        - Header file with declarations"
+	@echo "  sha256.c        - Main implementation"
+	@echo "  sha256_test.c   - Comprehensive test suite"
+	@echo "  sha256_example.c - Simple usage example"
+	@echo ""
+	@echo "Features:"
+	@echo "  - Complete SHA-256 implementation"
+	@echo "  - Incremental hashing support"
+	@echo "  - RISC-V optimized"
+	@echo "  - Cross-compilation support"
+	@echo "  - Comprehensive test vectors"
